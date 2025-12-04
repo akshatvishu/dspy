@@ -1,0 +1,51 @@
+name: Windows Installation Check
+
+on:
+  workflow_dispatch: # Allows you to trigger this manually from the Actions tab
+  push:
+    branches:
+      - main # Or your dev branch name
+
+jobs:
+  test-windows-install:
+    name: Test Install on Windows
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Test common versions. 3.12 is often where wheel issues happen.
+        python-version: ["3.10", "3.11", "3.12"] 
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      # We verify the environment is clean first
+      - name: Display Python Version
+        run: python --version
+
+      # ATTEMPT 1: Install from the current source (Simulates 'pip install .')
+      - name: Install DSPy from source
+        run: |
+          python -m pip install --upgrade pip
+          pip install .
+        continue-on-error: true # Let it proceed so we can see if specific imports fail later
+
+      # ATTEMPT 2: Install dependencies explicitly (Debugging the report)
+      # The user reported specific issues with numpy and sqlalchemy. 
+      # We check what currently gets installed.
+      - name: Check Installed Versions
+        run: |
+          pip list
+          python -c "import numpy; print(f'Numpy: {numpy.__version__}')"
+          python -c "import sqlalchemy; print(f'SQLAlchemy: {sqlalchemy.__version__}')"
+        continue-on-error: true
+
+      # ATTEMPT 3: Import Test
+      # Sometimes install succeeds but import fails due to missing DLLs on Windows
+      - name: Verify Import
+        run: python -c "import dspy; print('DSPy imported successfully')"
