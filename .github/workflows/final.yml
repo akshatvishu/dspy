@@ -1,0 +1,44 @@
+name: Verify Windows Fix (Numpy 1.26.0 / SQLA 1.4.2)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-specific-fix:
+    name: Test User's Exact Versions
+    runs-on: [windows-latest, ubuntu-latest]
+    strategy:
+      fail-fast: false
+      matrix:
+        # Testing on 3.10 and 3.11 is safest for older library versions like SQLA 1.4.2
+        python-version: ["3.10", "3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      # 1. Pre-install the SPECIFIC versions the user claimed worked.
+      # We install these BEFORE dspy to "pin" them in the environment.
+      - name: Pre-install Fixed Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install "numpy==1.26.0" "sqlalchemy==1.4.2"
+
+      # 2. Install DSPy (3.0.4)
+      # Pip should see that numpy>=1.26.0 is already satisfied by 1.26.0
+      # and should NOT attempt to upgrade to 2.0.0.
+      - name: Install DSPy 3.0.4
+        run: pip install dspy-ai==3.0.4
+
+      # 3. Verification
+      # If this step runs and prints the versions, the fix is confirmed.
+      - name: Verify Environment & Import
+        run: |
+          pip list
+          python -c "import numpy; print(f'Numpy Version: {numpy.__version__}')"
+          python -c "import sqlalchemy; print(f'SQLAlchemy Version: {sqlalchemy.__version__}')"
+          python -c "import dspy; print('DSPy imported successfully with pinned dependencies!')"
