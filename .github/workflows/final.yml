@@ -6,7 +6,7 @@ on:
 jobs:
   test-specific-fix:
     name: Test User's Exact Versions
-    runs-on: [windows-latest, ubuntu-latest]
+    runs-on: [windows-latest]
     strategy:
       fail-fast: false
       matrix:
